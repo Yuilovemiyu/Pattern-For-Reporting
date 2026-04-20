@@ -1,0 +1,261 @@
+	
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HC/PG SA Daily Report</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#005bac">
+
+  <link rel="manifest" href="manifest.json">
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    body { font-family: Arial; padding: 15px; }
+    h2 { color: #005bac; }
+    input, select, button { margin: 5px; padding: 8px; width: 100%; }
+    button { background: #ffc107; border: none; font-weight: bold; cursor: pointer; }
+    table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+    th, td { border: 1px solid black; padding: 6px; text-align: center; font-size: 12px; }
+
+    .rest { background-color: #fff3cd; }
+    .absent { background-color: #f8d7da; }
+    .working { background-color: #d4edda; }
+
+    .delete-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 4px 6px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .bonus-btn {
+      background: #28a745;
+      color: white;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>📊 HC/PG SA Daily Report</h2>
+
+<input type="date" id="date">
+
+<select id="store"></select>
+
+<select id="override">
+  <option value="">Leave/Absent</option>
+  <option>Present</option>
+  <option>Absent</option>
+  <option>On Leave</option>
+</select>
+
+<input type="number" id="total" placeholder="Total Apps">
+<input type="number" id="signed" placeholder="Signed">
+<input type="number" id="rejected" placeholder="Rejected">
+<input type="number" id="cancelled" placeholder="Cancelled">
+
+<select id="nonapps" disabled>
+  <option>Yes</option>
+  <option>No</option>
+  <option>Incomplete</option>
+</select>
+
+<button onclick="addEntry()">➕ Add Entry</button>
+<button onclick="saveAsPNG()">🖼️ Save PNG</button>
+<button class="bonus-btn" onclick="window.location.href='https://yuilovemiyu.github.io/Bonus-Calculator/'">
+  💰 Want to calculate bonus?
+</button>
+
+<div id="captureArea">
+  <h3>HC/PG SA Daily Report</h3>
+  <table id="report">
+    <tr>
+      <th>Date</th><th>Store</th><th>Status</th>
+      <th>Total</th><th>Signed</th><th>Rejected</th>
+      <th>Cancelled</th><th>Non Apps</th><th>Action</th>
+    </tr>
+  </table>
+</div>
+
+<script>
+// DOM
+const store = document.getElementById("store");
+const total = document.getElementById("total");
+const nonapps = document.getElementById("nonapps");
+const report = document.getElementById("report");
+const date = document.getElementById("date");
+const override = document.getElementById("override");
+const signed = document.getElementById("signed");
+const rejected = document.getElementById("rejected");
+const cancelled = document.getElementById("cancelled");
+const captureArea = document.getElementById("captureArea");
+
+date.valueAsDate = new Date();
+
+// STORE LIST
+const stores = [
+  {name:"Brookside", rest:"Monday"},
+  {name:"Manggahan", rest:"Monday"},
+  {name:"Bacoor", rest:"Tuesday"},
+  {name:"Dasmarinas", rest:"Tuesday"},
+  {name:"Gentri Jr.", rest:"Thursday"},
+  {name:"Tanza", rest:"Monday"},
+  {name:"Kawit", rest:"Tuesday"},
+  {name:"Tanza Paradahan", rest:"Tuesday"},
+  {name:"GMA", rest:"Tuesday"},
+  {name:"Tagaytay", rest:"Tuesday"},
+  {name:"Molino", rest:"Monday"},
+  {name:"Paliparan", rest:"Monday"},
+  {name:"San Pedro", rest:"Tuesday"},
+  {name:"Pacita", rest:"Monday"},
+  {name:"Binan Bayan", rest:"Monday"},
+  {name:"Crossing East", rest:"Monday"},
+  {name:"Anabu (Yssabelle)", rest:"Tuesday"},
+  {name:"Anabu (Ian)", rest:"Monday"}
+];
+
+// LOAD STORES
+stores.forEach(s=>{
+  let opt=document.createElement("option");
+  opt.value=s.name;
+  opt.text=s.name;
+  store.add(opt);
+});
+
+// DAY NAME
+function getDayName(d){
+  return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(d).getDay()];
+}
+
+// NON APPS
+total.addEventListener("input", ()=>{
+  nonapps.disabled = total.value > 1;
+});
+
+// RESET
+function resetForm(){
+  store.selectedIndex=0;
+  override.value="";
+  total.value="";
+  signed.value="";
+  rejected.value="";
+  cancelled.value="";
+  nonapps.value="-";
+  nonapps.disabled=true;
+  date.valueAsDate=new Date();
+}
+
+// CHECK EXISTING
+function rowExists(storeName, status){
+  for(let i=1;i<report.rows.length;i++){
+    let r = report.rows[i].cells;
+    if(r[1].innerText === storeName && r[2].innerText === status){
+      return true;
+    }
+  }
+  return false;
+}
+
+// CREATE ROW
+function createRow(data, status){
+  let row=report.insertRow();
+
+  data.forEach(v=>row.insertCell().innerText=v);
+
+  let action=row.insertCell();
+  let btn=document.createElement("button");
+  btn.innerText="Delete";
+  btn.className="delete-btn";
+  btn.onclick=()=>{ row.remove(); saveLocal(); };
+  action.appendChild(btn);
+
+  if(status==="Rest Day") row.classList.add("rest");
+  else if(status==="Absent") row.classList.add("absent");
+  else row.classList.add("working");
+}
+
+// AUTO ADD REST DAYS
+function addAllRestDays(){
+  let day = getDayName(date.value);
+
+  stores.forEach(s=>{
+    if(s.rest === day && !rowExists(s.name,"Rest Day")){
+      createRow([date.value,s.name,"Rest Day",0,0,0,0,"-"],"Rest Day");
+    }
+  });
+}
+
+// ADD ENTRY
+function addEntry(){
+  if (!store.value || !date.value) return alert("Please select a date and store.");
+
+  // FIRST CLICK
+  if(report.rows.length === 1){
+    addAllRestDays();
+  }
+
+  let selectedStore = stores.find(s=>s.name===store.value);
+
+  let status = override.value || (
+    selectedStore && getDayName(date.value) === selectedStore.rest
+      ? "Rest Day"
+      : "Working"
+  );
+
+  if(!rowExists(store.value, status)){
+    createRow([
+      date.value,
+      store.value,
+      status,
+      total.value || 0,
+      signed.value || 0,
+      rejected.value || 0,
+      cancelled.value || 0,
+      nonapps.value
+    ], status);
+  }
+
+  saveLocal();
+  resetForm();
+}
+
+// SAVE
+function saveLocal(){
+  let data=[];
+  for(let i=1;i<report.rows.length;i++){
+    let r=report.rows[i].cells;
+    data.push([...r].slice(0,8).map(c=>c.innerText));
+  }
+  localStorage.setItem("data",JSON.stringify(data));
+}
+
+// LOAD
+window.onload=()=>{
+  let data=JSON.parse(localStorage.getItem("data")||"[]");
+  data.forEach(d=>createRow(d,d[2]));
+};
+
+// PNG
+function saveAsPNG(){
+  html2canvas(captureArea,{scale:2}).then(c=>{
+    let a=document.createElement("a");
+    a.download="report.png";
+    a.href=c.toDataURL();
+    a.click();
+  });
+}
+
+// SW
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+
+</body>
+</html>
