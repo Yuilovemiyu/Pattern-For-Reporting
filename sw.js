@@ -1,22 +1,23 @@
-const CACHE_NAME = "report-v2"; // change version!
+const CACHE_NAME = "report-v1"; // change this when you want to force refresh
 
-const urlsToCache = [
-  "./",
-  "./index.html",
-  "./manifest.json",
-  "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"
+const ASSETS = [
+  "/",
+  "/index.html",
+  "/manifest.json"
 ];
 
-// INSTALL
+// INSTALL → cache files + skip waiting
 self.addEventListener("install", event => {
+  self.skipWaiting(); // 🔥 activate immediately
+
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(urlsToCache);
+      return cache.addAll(ASSETS);
     })
   );
 });
 
-// ACTIVATE
+// ACTIVATE → delete old caches + take control
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -29,13 +30,20 @@ self.addEventListener("activate", event => {
       );
     })
   );
+
+  self.clients.claim(); // 🔥 take control immediately
 });
 
-// FETCH (Offline Support)
+// FETCH → network first, fallback to cache
 self.addEventListener("fetch", event => {
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then(res => {
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, res.clone()); // update cache
+          return res;
+        });
+      })
+      .catch(() => caches.match(event.request))
   );
 });
