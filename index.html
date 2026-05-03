@@ -134,9 +134,16 @@ function getDayName(d){
   return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(d).getDay()];
 }
 
-// NON APPS
+// NON APPS LOGIC (UPDATED: allow 0–2)
 total.addEventListener("input", ()=>{
-  nonapps.disabled = total.value > 1;
+  let val = Number(total.value);
+
+  if(val <= 2){
+    nonapps.disabled = false;
+  } else {
+    nonapps.disabled = true;
+    nonapps.value = ""; // clear selection when disabled
+  }
 });
 
 // RESET
