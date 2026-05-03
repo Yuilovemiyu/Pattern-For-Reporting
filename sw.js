@@ -1,4 +1,4 @@
-const CACHE_NAME = "sa-report-v1";
+const CACHE_NAME = "report-v2"; // change version!
 
 const urlsToCache = [
   "./",
