@@ -1,4 +1,4 @@
-const CACHE_NAME = "report-v1"; // change this when you want to force refresh
+const CACHE_NAME = "report-v2"; // change this when you want to force refresh
 
 const ASSETS = [
   "/",
